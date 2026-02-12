@@ -83,40 +83,65 @@
             </div>
         </form>
 
-        <!-- Список товаров -->
         <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-            {% for product in products %}
-            <div class="col">
-                <div class="card h-100 game-card">
-                    {% if product.discount %}
-                    <span class="badge bg-danger position-absolute top-0 end-0 m-2">-{{ product.discount }}%</span>
-                    {% endif %}
-                    <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}" style="height: 180px; object-fit: contain;">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ product.name }}</h5>
-                        <div class="d-flex align-items-center mb-2">
-                            <p class="text-success fw-bold mb-0">{{ product.price }} ₽</p>
-                            {% if product.old_price %}
-                            <small class="text-muted text-decoration-line-through ms-2">{{ product.old_price }} ₽</small>
-                            {% endif %}
-                        </div>
-                        <a href="{% url 'product' product.id %}" class="btn btn-outline-primary w-100">
-                            <i class="bi bi-eye"></i> Подробнее
-                        </a>
+    {% for product in products %}
+    <div class="col">
+        <div class="card h-100 game-card position-relative">
+            {% if product.discount %}
+            <span class="discount-badge bg-danger text-white p-2 rounded">-{{ product.discount }}%</span>
+            {% endif %}
+            {% if product.image_url %}
+                <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}" style="height: 180px; object-fit: contain;">
+            {% else %}
+                <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 180px;">
+                    <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                </div>
+            {% endif %}
+            <div class="card-body">
+                                <h5 class="card-title">{{ product.name }}</h5>
+                                <!-- Средний рейтинг: всегда отображается -->
+                <div class="mb-2">
+                    <div class="rating d-flex gap-1">
+                        {% for i in "12345" %}
+                            {% with star_num=i|add:0 %}
+                                {% if product.average_rating is not none and product.average_rating >= star_num %}
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                {% else %}
+                                    <i class="bi bi-star text-muted"></i>
+                                {% endif %}
+                            {% endwith %}
+                        {% endfor %}
+
+                        {% if product.average_rating is not none and product.average_rating > 0 %}
+                            <span class="text-muted small ms-1">({{ product.average_rating|floatformat:"1" }})</span>
+                        {% else %}
+                            <span class="text-muted small ms-1">(Отзывов нет)</span>
+                        {% endif %}
                     </div>
                 </div>
-            </div>
-            {% empty %}
-            <div class="col-12">
-                <div class="alert alert-info text-center py-4">
-                    <i class="bi bi-exclamation-circle fs-4"></i>
-                    <h5 class="mt-2">Товары не найдены</h5>
-                    <p class="mb-0">Попробуйте изменить параметры фильтрации</p>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
 
+                <p class="card-text">
+                    {% if product.old_price and product.discount %}
+                    <span class="text-decoration-line-through text-muted me-2">{{ product.old_price }} ₽</span>
+                    {% endif %}
+                    <span class="fw-bold {% if product.discount %}text-danger{% else %}text-success{% endif %}">
+                        {{ product.price }} ₽
+                    </span>
+                </p>
+                <a href="{% url 'product' product.id %}" class="btn btn-primary w-100">Подробнее</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info text-center py-4">
+            <i class="bi bi-exclamation-circle fs-4"></i>
+            <h5 class="mt-2">Товары не найдены</h5>
+            <p class="mb-0">Попробуйте изменить параметры фильтрации</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
         <!-- Пагинация -->
         {% if products.paginator.num_pages > 1 %}
         <nav class="mt-4">

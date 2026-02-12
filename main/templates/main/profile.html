@@ -28,7 +28,7 @@
                                 <p><strong>Дата регистрации:</strong> {{ user.date_joined|date:"d.m.Y" }}</p>
                             </div>
                             <div class="d-flex justify-content-between">
-                                <a href="#" class="btn btn-outline-primary">Изменить данные</a>
+                                <a href="{% url 'profile_edit' %}" class="btn btn-outline-primary">Изменить данные</a>
                                 <a href="{% url 'logout' %}" class="btn btn-danger">Выйти</a>
                             </div>
                         </div>

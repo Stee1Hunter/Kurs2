@@ -2,13 +2,35 @@
 from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import FileExtensionValidator
+
+def product_image_path(instance, filename):
+    # Формат: media/products/game_<id>/product_<id>/filename.jpg
+    return f'products/game_{instance.game.id}/product_{instance.id}/{filename}'
+
+def game_logo_path(instance, filename):
+    return f'games/logo/game_{instance.id}/{filename}'
 
 class Game(models.Model):
     name = models.CharField(max_length=100)
-    logo_url = models.URLField(max_length=255)
+    # Было: logo_url = models.URLField(...)
+    logo = models.ImageField(
+        upload_to=game_logo_path,
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp'])]
+    )
 
     def __str__(self):
         return self.name
+
+    @property
+    def logo_url(self):
+        """Совместимость со старым кодом — возвращает URL или None"""
+        if self.logo:
+            return self.logo.url
+        return None
+
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -23,13 +45,32 @@ class Product(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     old_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     discount = models.IntegerField(null=True, blank=True)
-    image_url = models.URLField(max_length=255)
+    # Было: image_url = models.URLField(...)
+    image = models.ImageField(
+        upload_to=product_image_path,
+        blank=True,  # разрешает пустое значение в форме
+        null=True,  # разрешает NULL в БД
+        validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png', 'webp'])],
+        verbose_name="Изображение"
+    )
+    average_rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=0.00,
+        editable=False
+    )
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     game = models.ForeignKey(Game, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.name
 
+    @property
+    def image_url(self):
+        """Возвращает URL изображения, если оно есть. Иначе — None."""
+        if self.image:
+            return self.image.url
+        return None  # ←
 
 
 class Basket(models.Model):
@@ -59,3 +100,16 @@ class Review(models.Model):
     rating = models.IntegerField(choices=[(i, i) for i in range(1, 6)])
     comment = models.TextField()
     created_at = models.DateTimeField(default=timezone.now, verbose_name="Дата отзыва")
+
+class Wishlist(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('user', 'product')  # Запрещает дублирование одного товара в вишлисте у одного пользователя
+        verbose_name = "Wishlist item"
+        verbose_name_plural = "Wishlist items"
+
+    def __str__(self):
+        return f"{self.user.username} — {self.product.name}"

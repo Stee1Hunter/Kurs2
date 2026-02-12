@@ -1,16 +1,24 @@
 from django.contrib import admin
 from django.contrib.auth.models import User
-from .models import Game, Category, Product, Review, Basket, Order, OrderItem
+from .models import Game, Category, Product, Review, Basket, Order, OrderItem, Wishlist
 
 @admin.register(Game)
 class GameAdmin(admin.ModelAdmin):
-    list_display = ('name', 'logo_url')
+    list_display = ('name', 'logo_preview')  # ← используем метод для превью
     search_fields = ('name',)
     list_filter = ('name',)
-    ordering = ('name',)
+
+    # Добавляем метод для отображения превью логотипа в списке
+    def logo_preview(self, obj):
+        if obj.logo:
+            return f'<img src="{obj.logo.url}" style="max-height: 30px;">'
+        return "—"
+    logo_preview.allow_tags = True
+    logo_preview.short_description = "Логотип"
+
     fieldsets = (
         (None, {
-            'fields': ('name', 'logo_url')
+            'fields': ('name', 'logo')  # ← теперь logo, а не logo_url
         }),
     )
 
@@ -26,12 +34,21 @@ class CategoryAdmin(admin.ModelAdmin):
         }),
     )
 
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'category', 'game', 'price', 'discount')
-    search_fields = ('name', 'category__name', 'game__name')
-    list_filter = ('category', 'game', 'discount')
-    ordering = ('name',)
+    list_display = ('name', 'category', 'game', 'price', 'discount', 'image_preview')
+
+    # ...
+
+    def image_preview(self, obj):
+        if obj.image:
+            return f'<img src="{obj.image.url}" style="max-height: 30px;">'
+        return "—"
+
+    image_preview.allow_tags = True
+    image_preview.short_description = "Изображение"
+
     fieldsets = (
         ('Основная информация', {
             'fields': ('name', 'description', 'category', 'game')
@@ -40,7 +57,7 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ('price', 'old_price', 'discount')
         }),
         ('Изображение', {
-            'fields': ('image_url',)
+            'fields': ('image',)  # ← не image_url!
         }),
     )
 
@@ -100,3 +117,18 @@ class ReviewAdmin(admin.ModelAdmin):
             'fields': ('created_at',)
         }),
     )
+
+    @admin.register(Wishlist)
+    class WishlistAdmin(admin.ModelAdmin):
+        list_display = ('user', 'product', 'created_at')
+        search_fields = ('user__username', 'product__name')
+        list_filter = ('user', 'created_at')
+        ordering = ('-created_at',)
+        fieldsets = (
+            ('Содержимое списка желаний', {
+                'fields': ('user', 'product')
+            }),
+            ('Метаданные', {
+                'fields': ('created_at',)
+            }),
+        )

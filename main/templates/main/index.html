@@ -13,7 +13,7 @@
 {% for game in games_with_discounts %}
 <div class="row mb-5">
     <div class="col-12">
-        <h2 class="mb-4"><i class="bi bi-joystick"></i> {{ game.name }}</h2>
+        <h2 class="mb-4"><i class="bi bi-joystick"></i> {{ game.game.name }}</h2>
         <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
             {% for product in game.products %}
             <div class="col">
@@ -24,8 +24,29 @@
                     <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}">
                     <div class="card-body">
                         <h5 class="card-title">{{ product.name }}</h5>
+                <!-- Средний рейтинг: всегда отображается -->
+                        <div class="mb-2">
+                            <div class="rating d-flex gap-1">
+                                {% for i in "12345" %}
+                                    {% with star_num=i|add:0 %}
+                                        {% if product.average_rating is not none and product.average_rating >= star_num %}
+                                            <i class="bi bi-star-fill text-warning"></i>
+                                        {% else %}
+                                            <i class="bi bi-star text-muted"></i>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endfor %}
+
+                                {% if product.average_rating is not none and product.average_rating > 0 %}
+                                    <span class="text-muted small ms-1">({{ product.average_rating|floatformat:"1" }})</span>
+                                {% else %}
+                                    <span class="text-muted small ms-1">(Отзывов нет)</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
                         <p class="card-text">
-                            {% if product.discount %}
+                            {% if product.old_price and product.discount %}
                             <span class="text-decoration-line-through text-muted me-2">{{ product.old_price }} ₽</span>
                             {% endif %}
                             <span class="fw-bold {% if product.discount %}text-danger{% else %}text-success{% endif %}">

@@ -1,0 +1,93 @@
+{% extends "main/layout.html" %}
+
+{% block title %}Мой список желаний{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4"><i class="bi bi-heart-fill text-danger"></i> Мой список желаний</h2>
+
+    {% if wishlist_items %}
+    <div class="row g-3">
+        {% for item in wishlist_items %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm border-0">
+                <img src="{{ item.product.image_url }}" class="card-img-top" alt="{{ item.product.name }}" style="height: 200px; object-fit: cover;">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ item.product.name }}</h5>
+                    <p class="card-text text-muted">{{ item.product.category.name }} • {{ item.product.game.name }}</p>
+                    <p class="fw-bold text-success mb-2">{{ item.product.price }} ₽</p>
+                    {% if item.product.old_price %}
+                        <p class="text-muted text-decoration-line-through">{{ item.product.old_price }} ₽</p>
+                    {% endif %}
+                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                        <a href="{% url 'product' item.product.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> Детали
+                        </a>
+                        <button 
+                            class="btn btn-sm btn-outline-danger wishlist-toggle"
+                            data-product-id="{{ item.product.id }}"
+                            title="Убрать из списка желаний"
+                        >
+                            <i class="bi bi-heart-fill text-danger"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-heart fs-1 text-muted"></i>
+        <h4 class="mt-3">Ваш список желаний пуст</h4>
+        <p class="text-muted">Добавляйте товары, чтобы сохранить их для будущей покупки.</p>
+        <a href="{% url 'catalog_all' %}" class="btn btn-primary mt-2">
+            <i class="bi bi-arrow-right"></i> Перейти в каталог
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- JS для AJAX-переключения -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.wishlist-toggle').forEach(button => {
+        button.addEventListener('click', function() {
+            const productId = this.dataset.productId;
+            fetch(`/wishlist/toggle/${productId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Обновляем счётчик в навигации (если есть)
+                    const badge = document.querySelector('.badge.bg-info');
+                    if (badge) badge.textContent = data.count;
+
+                    // Удаляем карточку
+                    this.closest('.col-md-6').remove();
+
+                    // Если больше нет элементов — показываем пустое состояние
+                    if (document.querySelectorAll('.col-md-6').length === 0) {
+                        document.querySelector('.container').innerHTML = `
+                            <div class="text-center py-5">
+                                <i class="bi bi-heart fs-1 text-muted"></i>
+                                <h4 class="mt-3">Ваш список желаний пуст</h4>
+                                <p class="text-muted">Добавляйте товары, чтобы сохранить их для будущей покупки.</p>
+                                 <a href="{% url 'catalog_all' %}" class="btn btn-primary mt-2">
+                                    <i class="bi bi-arrow-right"></i> Перейти в каталог
+                                </a>
+                            </div>
+                        `;
+                    }
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

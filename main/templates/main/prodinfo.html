@@ -33,13 +33,30 @@
         {% endif %}
 
         <div class="mb-4">
-            <button class="btn btn-primary btn-lg me-2" id="add-to-basket" data-product-id="{{ product.id }}">
-                <i class="bi bi-cart-plus"></i> Добавить в корзину
-            </button>
-            <button class="btn btn-outline-secondary">
-                <i class="bi bi-heart"></i> В избранное
-            </button>
-        </div>
+    <!-- Кнопка "Добавить в корзину" (остаётся без изменений) -->
+    <button class="btn btn-primary btn-lg me-2" id="add-to-basket" data-product-id="{{ product.id }}">
+        <i class="bi bi-cart-plus"></i> Добавить в корзину
+    </button>
+
+    <!-- Кнопка "В желания" — обновлённая -->
+    {% if user.is_authenticated %}
+        <button
+            class="btn btn-outline-secondary wishlist-toggle"
+            data-product-id="{{ product.id }}"
+            title="{% if in_wishlist %}Убрать из желаний{% else %}Добавить в желания{% endif %}"
+        >
+            {% if in_wishlist %}
+                <i class="bi bi-heart-fill text-danger"></i> В желаниях
+            {% else %}
+                <i class="bi bi-heart"></i> В желания
+            {% endif %}
+        </button>
+    {% else %}
+        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-outline-secondary">
+            <i class="bi bi-heart"></i> В желания
+        </a>
+    {% endif %}
+</div>
 
         <div class="card mb-4">
             <div class="card-header bg-light">
@@ -67,7 +84,7 @@
                         <h5>{{ review.user.username }}</h5>
                         <div class="rating">
                             {% for i in "12345" %}
-                                <i class="bi bi-star{% if forloop.counter > review.rating %}-fill{% endif %}"></i>
+                                <i class="bi bi-star{% if forloop.counter <= review.rating %}-fill{% endif %}"></i>
                             {% endfor %}
                         </div>
                     </div>
@@ -137,6 +154,7 @@
 </div>
 
 <script>
+// Добавление в корзину
 document.getElementById('add-to-basket').addEventListener('click', function() {
     const productId = this.getAttribute('data-product-id');
     fetch(`/add-to-basket/${productId}/`, {
@@ -150,8 +168,8 @@ document.getElementById('add-to-basket').addEventListener('click', function() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Товар добавлен в корзину!');
-            // Обновляем счетчик корзины
+
+            // Обновляем счётчик корзины
             const basketCounter = document.querySelector('.badge.bg-danger');
             if (basketCounter) {
                 basketCounter.textContent = data.basket_item_count;
@@ -159,6 +177,58 @@ document.getElementById('add-to-basket').addEventListener('click', function() {
         } else {
             alert('Ошибка: ' + data.message);
         }
+    });
+});
+
+// Добавление/удаление из вишлиста
+document.querySelectorAll('.wishlist-toggle').forEach(button => {
+    button.addEventListener('click', function() {
+        const productId = this.dataset.productId;
+        const icon = this.querySelector('i');
+
+        fetch(`/wishlist/toggle/${productId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Обновляем счётчик в навигации
+                const navBadge = document.querySelector('a[href="/wishlist/"] .badge');
+                if (data.count > 0) {
+                    if (navBadge) {
+                        navBadge.textContent = data.count;
+                    } else {
+                        const navLink = document.querySelector('a[href="/wishlist/"]');
+                        if (navLink) {
+                            navLink.insertAdjacentHTML('beforeend', `
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info">
+                                    ${data.count}
+                                </span>
+                            `);
+                        }
+                    }
+                } else {
+                    if (navBadge) navBadge.remove();
+                }
+
+                // Меняем состояние кнопки
+                if (data.action === 'added') {
+                    icon.className = 'bi bi-heart-fill text-danger';
+                    this.innerHTML = '<i class="bi bi-heart-fill text-danger"></i> В желаниях';
+                } else {
+                    icon.className = 'bi bi-heart';
+                    this.innerHTML = '<i class="bi bi-heart"></i> В желания';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            alert('Не удалось обновить список желаний.');
+        });
     });
 });
 </script>

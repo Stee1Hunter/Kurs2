@@ -1,7 +1,7 @@
 <nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top mb-4">
     <div class="container">
         <a class="navbar-brand" href="{% url 'index' %}">
-            <img alt="GameMarket Logo">
+            <img src="./stat" alt="GameMarket Logo" height="40" class="d-inline-block align-text-top">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
@@ -27,6 +27,12 @@
             </ul>
           <div class="d-flex">
     {% if user.is_authenticated %}
+    <a href="{% url 'wishlist' %}" class="btn btn-outline-secondary position-relative me-2">
+        <i class="bi bi-heart"></i> Желания
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info">
+            {{ wishlist_count }}
+        </span>
+    </a>
     <a href="{% url 'basket' %}" class="btn btn-outline-primary position-relative me-2">
         <i class="bi bi-cart"></i> Корзина
         <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
