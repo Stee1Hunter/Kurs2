@@ -142,9 +142,9 @@ class Migration(migrations.Migration):
                 JOIN main_product p ON b.product_id = p.id
                 WHERE b.user_id = p_user_id;
             
-                -- Создаём заказ
-                INSERT INTO main_order (user_id, total_price, status)
-                VALUES (p_user_id, v_total, 'pending')
+                -- Создаём заказ с NOW() для created_at
+                INSERT INTO main_order (user_id, total_price, status, created_at)
+                VALUES (p_user_id, v_total, 'pending', NOW())
                 RETURNING id INTO v_new_order_id;
             
                 -- Добавляем элементы заказа
@@ -174,7 +174,7 @@ class Migration(migrations.Migration):
 
                 SELECT price INTO current_price
                 FROM main_product
-                WHERE id = $1;
+                WHERE id = product_id;
 
                 IF current_price IS NULL THEN
                     RAISE EXCEPTION 'Товар не найден';
@@ -185,9 +185,9 @@ class Migration(migrations.Migration):
                     old_price = price,
                     price = ROUND(price * (100 - discount_percent) / 100, 2),
                     discount = discount_percent
-                WHERE id = $1;
+                WHERE id = product_id;
 
-                RAISE NOTICE 'Скидка %%% применена к товару %', discount_percent, $1;
+                RAISE NOTICE 'Скидка %%% применена к товару %', discount_percent, product_id;
             END;
             $$;
 

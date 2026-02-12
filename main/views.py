@@ -73,8 +73,7 @@ def registration_user(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            next_url = request.GET.get('next')
-            return redirect(next_url or 'index')  # ← Используем name URL
+            return redirect('index')
     else:
         form = RegistrationForm()
     return render(request, 'main/register.html', {'form': form})
