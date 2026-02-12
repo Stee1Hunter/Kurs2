@@ -74,7 +74,7 @@ class Migration(migrations.Migration):
             BEGIN
                 IF NOT EXISTS (
                     SELECT 1
-                    FROM main_order_item oi
+                    FROM main_orderitem oi
                     JOIN main_order o ON oi.order_id = o.id
                     WHERE oi.product_id = NEW.product_id
                       AND o.user_id = NEW.user_id
