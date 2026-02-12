@@ -2,6 +2,115 @@ from django.contrib import admin
 from django.contrib.auth.models import User
 from .models import Game, Category, Product, Review, Basket, Order, OrderItem, Wishlist
 
+@admin.register(BackupFile)
+class BackupFileAdmin(ModelAdmin):
+    list_display = ("file", "created_at")
+    actions = ["restore_backup"]
+
+    def has_add_permission(self, request):
+        return False
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "make-backup/",
+                self.admin_site.admin_view(self.make_backup_view),
+                name="make_backup",
+            ),
+        ]
+        return custom + urls
+
+    def make_backup_view(self, request):
+        try:
+            media_backup_dir = os.path.join(settings.MEDIA_ROOT, 'backups')
+            os.makedirs(media_backup_dir, exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            filename = f"backup_{timestamp}.dump"
+            abs_path = os.path.join(media_backup_dir, filename)
+
+            db = settings.DATABASES["default"]
+
+            # Передаём пароль через окружение — безопаснее
+            env = os.environ.copy()
+            env["PGPASSWORD"] = db["PASSWORD"]
+
+            # Формируем аргументы без URL (избегаем подстановки пароля)
+            cmd = [
+                "pg_dump",
+                "--host", db.get("HOST", "localhost"),
+                "--port", str(db.get("PORT", "5432")),
+                "--username", db["USER"],
+                "--dbname", db["NAME"],
+                "--format=custom",
+                "--file", abs_path,
+            ]
+
+            result = subprocess.run(
+                cmd,
+                env=env,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+            relative_path = f"backups/{filename}"
+
+            # Сохраняем в модель
+            backup = BackupFile(file=relative_path)
+            backup.save()
+
+            messages.success(request, "Бэкап успешно создан!")
+            return redirect("admin:main_backupfile_changelist")
+
+        except subprocess.CalledProcessError as e:
+            messages.error(request, f"pg_dump failed: {e.stderr.strip()}")
+        except Exception as e:
+            messages.error(request, f"Ошибка: {e}")
+
+        return redirect("admin:main_backupfile_changelist")
+
+    def restore_backup(self, request, queryset):
+        try:
+            if queryset.count() != 1:
+                self.message_user(request, "Выберите один бэкап!", messages.ERROR)
+                return
+
+            backup = queryset.first()
+            backup_path = backup.file.path
+
+            if not os.path.exists(backup_path):
+                self.message_user(request, "Файл бэкапа не найден!", messages.ERROR)
+                return
+
+            db = settings.DATABASES["default"]
+            db_url = (
+                f"postgresql://{db['USER']}:{db['PASSWORD']}@"
+                f"{db['HOST']}:{db['PORT']}/{db['NAME']}"
+            )
+
+            cmd = [
+                "pg_restore",
+                f"--dbname={db_url}",
+                "--clean",
+                "--if-exists",
+                backup_path,
+            ]
+
+            subprocess.run(cmd, check=True)
+
+            self.message_user(request, "База данных успешно восстановлена!", messages.SUCCESS)
+
+        except subprocess.CalledProcessError:
+            self.message_user(request, "Ошибка: pg_restore завершился неудачно.", messages.ERROR)
+
+        except Exception as e:
+            self.message_user(request, f"Ошибка восстановления: {e}", messages.ERROR)
+
+    restore_backup.short_description = "Восстановить БД из выбранного бэкапа"
+
 @admin.register(Game)
 class GameAdmin(admin.ModelAdmin):
     list_display = ('name', 'logo_preview')  # ← используем метод для превью

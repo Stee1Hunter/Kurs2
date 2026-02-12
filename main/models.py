@@ -113,3 +113,16 @@ class Wishlist(models.Model):
 
     def __str__(self):
         return f"{self.user.username} — {self.product.name}"
+
+def backup_path(instance, filename):
+    return f"backups/{filename}"
+
+class BackupFile(models.Model):
+    file = models.FileField(upload_to=backup_path)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return os.path.basename(self.file.name)
+    class Meta:
+        verbose_name = "Бэкап"
+        verbose_name_plural = "Бэкапы"
