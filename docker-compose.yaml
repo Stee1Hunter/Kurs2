@@ -27,7 +27,7 @@ services:
         condition: service_healthy
 
   kurs:
-    build: .
+    image: ghcr.io/stee1hunter/kurs2:latest
     restart: always
     ports:
       - 8000:8000

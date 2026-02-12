@@ -35,7 +35,7 @@ INSTALLED_APPS = [
     'main',
     'basket',
     'rest_framework',
-    'api',
+    'api'
     'django_filters',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -142,11 +142,15 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 CART_SESSION_ID = 'basket'
 
 REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,  # Количество записей на страницу
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',  # Доступ только для авторизованных
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 }
 
 REST_FRAMEWORK_METHOD_RESTRICTIONS = {

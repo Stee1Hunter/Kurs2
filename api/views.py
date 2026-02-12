@@ -1,128 +1,41 @@
 # api/views.py
-from rest_framework import viewsets
-from .serializers import GameSerializer, CategorySerializer, ProductSerializer, \
-    UserSerializer, BasketSerializer, OrderSerializer, ReviewSerializer
-from main.models import Game, Category, Product, User, Basket, Order, Review
-from .permissions import IsAdminOrReadOnly, IsOwnerOrAdmin, IsBasketOwner, IsOrderOwner
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import (
-    IsAuthenticated,
-    IsAdminUser,
-    BasePermission,
-    SAFE_METHODS
+from rest_framework import viewsets, permissions
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from main.models import Game, Category, Product, Review, Order
+from .serializers import (
+    GameSerializer, CategorySerializer, ProductSerializer,
+    ReviewSerializer, OrderSerializer
 )
 
-class StandardResultsSetPagination(PageNumberPagination):
-    page_size = 10
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-
-# === Игры ===
 class GameViewSet(viewsets.ModelViewSet):
     queryset = Game.objects.all()
     serializer_class = GameSerializer
-    permission_classes = [IsAdminOrReadOnly]
-    pagination_class = StandardResultsSetPagination
-    search_fields = ['name']
+    permission_classes = [permissions.IsAdminUser]
 
-
-# === Категории ===
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.select_related('game').all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAdminOrReadOnly]
-    pagination_class = StandardResultsSetPagination
-    search_fields = ['name']
+    permission_classes = [permissions.IsAdminUser]
 
-
-# === Товары ===
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all()
+    queryset = Product.objects.select_related('category', 'game').all()
     serializer_class = ProductSerializer
-    permission_classes = [IsAdminOrReadOnly]
-    pagination_class = StandardResultsSetPagination
-    search_fields = ['name']
+    permission_classes = [permissions.IsAdminUser]
 
-
-# === Пользователи ===
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    pagination_class = StandardResultsSetPagination
-    search_fields = ['username']
-
-    def get_permissions(self):
-        # Только админы могут создавать/редактировать/удалять
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAdminUser()]
-        # Все могут читать
-        return [IsAuthenticated()]
-
-
-# === Корзина ===
-class BasketViewSet(viewsets.ModelViewSet):
-    serializer_class = BasketSerializer
-    pagination_class = StandardResultsSetPagination
-    search_fields = ['product__name']
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_superuser:
-            return Basket.objects.all()
-        return Basket.objects.filter(user=user)
-
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated()]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), IsBasketOwner()]
-        return [IsAdminUser()]
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-
-# === Заказы ===
-class OrderViewSet(viewsets.ModelViewSet):
-    serializer_class = OrderSerializer
-    pagination_class = StandardResultsSetPagination
-    search_fields = ['status']
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_superuser:
-            return Order.objects.all()
-        return Order.objects.filter(user=user)
-
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated(), IsOrderOwner()]
-        elif self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [IsAdminUser()]
-        return [IsAdminUser()]
-
-
-# === Отзывы ===
 class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.select_related('product', 'user').all()
     serializer_class = ReviewSerializer
-    pagination_class = StandardResultsSetPagination
-    search_fields = ['rating']
-
-    def get_queryset(self):
-        user = self.request.user
-        if user.is_superuser:
-            return Review.objects.all()
-        return Review.objects.filter(user=user)
-
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [IsAuthenticated()]
-        elif self.action in ['create']:
-            return [IsAuthenticated()]
-        elif self.action in ['update', 'partial_update', 'destroy']:
-            return [IsAuthenticated(), IsOwnerOrAdmin()]
-        return [IsAdminUser()]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+class OrderViewSet(viewsets.ReadOnlyModelViewSet):  # Только чтение!
+    serializer_class = OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if self.request.user.is_staff:
+            return Order.objects.prefetch_related('items__product').all()
+        return Order.objects.filter(user=self.request.user).prefetch_related('items__product')
