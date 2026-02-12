@@ -35,7 +35,7 @@ INSTALLED_APPS = [
     'main',
     'basket',
     'rest_framework',
-    'api'
+    'api',
     'django_filters',
     'django.contrib.admin',
     'django.contrib.auth',
