@@ -1,8 +1,8 @@
-
 from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
+import os
 
 def product_image_path(instance, filename):
     # Формат: media/products/game_<id>/product_<id>/filename.jpg
