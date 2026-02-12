@@ -235,34 +235,34 @@ class Migration(migrations.Migration):
                     SELECT COUNT(*) INTO v_count
                     FROM main_basket
                     WHERE user_id = p_user_id;
-
+                
                     IF v_count = 0 THEN
                         RAISE EXCEPTION 'Корзина пуста';
                     END IF;
-
+                
                     -- Считаем общую сумму
                     SELECT COALESCE(SUM(b.quantity * p.price), 0)
                     INTO v_total
                     FROM main_basket b
                     JOIN main_product p ON b.product_id = p.id
                     WHERE b.user_id = p_user_id;
-
-                    -- Создаём заказ с NOW() для created_at
+                
+                    -- Создаём заказ со статусом "на рассмотрении"
                     INSERT INTO main_order (user_id, total_price, status, created_at)
-                    VALUES (p_user_id, v_total, 'pending', NOW())
+                    VALUES (p_user_id, v_total, 'на рассмотрении', NOW())
                     RETURNING id INTO v_new_order_id;
-
+                
                     -- Добавляем элементы заказа
                     INSERT INTO main_orderitem (order_id, product_id, quantity, price)
                     SELECT v_new_order_id, b.product_id, b.quantity, p.price
                     FROM main_basket b
                     JOIN main_product p ON b.product_id = p.id
                     WHERE b.user_id = p_user_id;
-
+                
                     -- Очищаем корзину
                     DELETE FROM main_basket WHERE user_id = p_user_id;
-
-                    RAISE NOTICE 'Заказ % создан для пользователя %', v_new_order_id, p_user_id;
+                
+                    RAISE NOTICE 'Заказ % создан для пользователя % со статусом "на рассмотрении"', v_new_order_id, p_user_id;
                 END;
                 $$;
 
